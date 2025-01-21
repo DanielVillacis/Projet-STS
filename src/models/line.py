@@ -34,7 +34,7 @@ Cours: IFT630
 Version: 1.0
 """
 
-from models.intersection import Intersection
+from src.models.intersection import Intersection
 
 
 class Line:

@@ -1,11 +1,19 @@
 """
 Point d'entrée principal pour la simulation avec gestion des synchronisations.
 """
+import sys
+from pathlib import Path
+root_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
+sys.path.append(str(root_dir))
+
+
 import logging
 from enum import Enum
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
+
+import argparse # for CLI testing purposes
 
 from src.projects.project_1.core import (
     mutex_sync, rlock_sync, semaphore_sync, condition_sync,
@@ -155,3 +163,11 @@ class Simulation1:
         for sync_type in SyncType:
             print(f"\nSimulation de synchronisation avec {sync_type.value}")
             Simulation1.run(duration, sync_type=sync_type.value)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run the synchronization simulation.")
+    parser.add_argument("--duration", type=int, required=True, help="Duration of the simulation in seconds")
+    parser.add_argument("--sync_type", type=str, required=True, choices=[e.value for e in SyncType], help="Type of synchronization to use")
+
+    args = parser.parse_args()
+    Simulation1.run(duration=args.duration, sync_type=args.sync_type)

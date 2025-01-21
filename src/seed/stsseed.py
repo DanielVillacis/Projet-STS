@@ -7,7 +7,9 @@ from src.models.bus import Bus
 from src.models.passenger import Passenger
 import random
 
-from ui.console_ui import ConsoleUI
+from src.ui.console_ui import ConsoleUI
+
+from colorama import Fore
 
 class STSSeed:
     def __init__(self):
@@ -22,49 +24,49 @@ class STSSeed:
     def initialize_system(self):
         """Initialise tout le système STS avec vérification dans le bon ordre"""
         try:
-            ConsoleUI.print_status_update("Démarrage de l'initialisation du système...", "white")
+            ConsoleUI.print_status_update("Démarrage de l'initialisation du système...", f"{Fore.WHITE}")
             
             # 1. Création des composants de base
             self._create_stops()
-            ConsoleUI.print_status_update("✓ Arrêts créés", "green")
+            ConsoleUI.print_status_update("✓ Arrêts créés", f"{Fore.GREEN}")
             
             self._create_stations()
-            ConsoleUI.print_status_update("✓ Stations créées", "green")
+            ConsoleUI.print_status_update("✓ Stations créées", f"{Fore.GREEN}")
             
             self._create_intersections()
-            ConsoleUI.print_status_update("✓ Intersections créées", "green")
+            ConsoleUI.print_status_update("✓ Intersections créées", f"{Fore.GREEN}")
             
             # 2. Établissement des connexions
             self._connect_station_stops()
-            ConsoleUI.print_status_update("✓ Connexions stations-arrêts établies", "green")
+            ConsoleUI.print_status_update("✓ Connexions stations-arrêts établies", f"{Fore.GREEN}")
             
             self._connect_intersections()
-            ConsoleUI.print_status_update("✓ Intersections connectées", "green")
+            ConsoleUI.print_status_update("✓ Intersections connectées", f"{Fore.GREEN}")
             
             # 3. Vérification des prérequis pour les routes
-            ConsoleUI.print_status_update("Vérification des prérequis pour les routes...", "cyan")
+            ConsoleUI.print_status_update("Vérification des prérequis pour les routes...", f"{Fore.CYAN}")
             if self._verify_route_prerequisites():
-                ConsoleUI.print_status_update("✓ Prérequis validés", "green")
+                ConsoleUI.print_status_update("✓ Prérequis validés", f"{Fore.GREEN}")
             
             # 4. Création des routes
             self._create_routes()
-            ConsoleUI.print_status_update("✓ Routes créées", "green")
+            ConsoleUI.print_status_update("✓ Routes créées", f"{Fore.GREEN}")
             
             # 5. Création des bus
             self._create_buses()
-            ConsoleUI.print_status_update("✓ Bus créés", "green")
+            ConsoleUI.print_status_update("✓ Bus créés", f"{Fore.GREEN}")
             
             # 6. Création des lignes (maintenant que les bus existent)
             self._create_lines()
-            ConsoleUI.print_status_update("✓ Lignes créées", "green")
+            ConsoleUI.print_status_update("✓ Lignes créées", f"{Fore.GREEN}")
             
             # 7. Initialisation des bus avec leurs lignes
             self._initialize_buses()
-            ConsoleUI.print_status_update("✓ Bus initialisés", "green")
+            ConsoleUI.print_status_update("✓ Bus initialisés", f"{Fore.GREEN}")
             
             # 8. Création des passagers en dernier
             self._create_passengers()
-            ConsoleUI.print_status_update("✓ Passagers créés", "green")
+            ConsoleUI.print_status_update("✓ Passagers créés", f"{Fore.GREEN}")
             
             # Résumé final
             self._display_initialization_stats()
@@ -79,7 +81,7 @@ class STSSeed:
 
     def _initialize_buses(self):
         """Initialise correctement les bus avec leurs lignes et routes"""
-        ConsoleUI.print_status_update("Initialisation des bus...", "cyan")
+        ConsoleUI.print_status_update("Initialisation des bus...", f"{Fore.CYAN}")
         
         for line_id, line in self.lines.items():
             if not line.routes:
@@ -110,7 +112,7 @@ class STSSeed:
                                 f"Ligne: {line_id}, "
                                 f"Route: {bus.current_route.id}, "
                                 f"Arrêt initial: {bus.current_stop.name}",
-                                "green"
+                                f"{Fore.GREEN}"
                             )
                     
                 except Exception as e:
@@ -121,7 +123,7 @@ class STSSeed:
     def _create_stops(self):
         """Crée tous les 66 arrêts (S0-S64 + S99)"""
         try:
-            ConsoleUI.print_status_update("Création des arrêts...", "cyan")
+            ConsoleUI.print_status_update("Création des arrêts...", f"{Fore.CYAN}")
             
             # Création des arrêts standards
             for i in range(65):
@@ -155,7 +157,7 @@ class STSSeed:
 
     def _create_initial_stop_connections(self):
         """Établit les connexions initiales entre les arrêts selon la topologie du réseau"""
-        ConsoleUI.print_status_update("Établissement des connexions entre arrêts...", "cyan")
+        ConsoleUI.print_status_update("Établissement des connexions entre arrêts...", f"{Fore.CYAN}")
         
         # Définition complète des connexions selon la topologie du réseau
         basic_connections = {
@@ -260,7 +262,7 @@ class STSSeed:
                             connections_count += 1
                             ConsoleUI.print_status_update(
                                 f"Connexion établie: {stop_name} <-> {neighbor_name}",
-                                "white"
+                                f"{Fore.WHITE}"
                             )
                     else:
                         ConsoleUI.print_warning(f"Arrêt voisin non trouvé: {neighbor_name}")
@@ -424,7 +426,7 @@ class STSSeed:
     def _create_routes(self):
         """Crée les routes pour les 15 lignes bidirectionnelles"""
         try:
-            ConsoleUI.print_status_update("Création des routes...", "cyan")
+            ConsoleUI.print_status_update("Création des routes...", f"{Fore.CYAN}")
             
             # Vérification préalable de l'existence des stations
             required_stations = [
@@ -563,7 +565,7 @@ class STSSeed:
                     
                     ConsoleUI.print_status_update(
                         f"Routes {route_id}-A et {route_id}-B créées avec succès", 
-                        "green"
+                        f"{Fore.GREEN}"
                     )
                     
                 except Exception as e:
@@ -616,7 +618,7 @@ class STSSeed:
     def _create_lines(self):
         """Crée les 15 lignes bidirectionnelles"""
         try:
-            ConsoleUI.print_status_update("Création des lignes de bus...", "cyan")
+            ConsoleUI.print_status_update("Création des lignes de bus...", f"{Fore.CYAN}")
             
             # Vérification des prérequis
             if not self.routes:
@@ -718,7 +720,7 @@ class STSSeed:
                     created_lines += 2
                     ConsoleUI.print_status_update(
                         f"Ligne {line_id} créée avec {num_buses_needed} bus", 
-                        "green"
+                        f"{Fore.GREEN}"
                     )
 
                 except Exception as e:
@@ -758,7 +760,7 @@ class STSSeed:
                     f"{len(line.buses)} bus, "
                     f"{len(line.routes)} routes, "
                     f"de {line.starting_station.name} à {line.ending_station.name}",
-                    "white"
+                    f"{Fore.WHITE}"
                 )
 
         except Exception as e:
@@ -802,7 +804,7 @@ class STSSeed:
             ("Passagers", len(self.passengers))
         ]
         
-        ConsoleUI.print_status_update("\nStatistiques d'initialisation:", "cyan")
+        ConsoleUI.print_status_update("\nStatistiques d'initialisation:", f"{Fore.CYAN}")
         for name, count in stats:
-            ConsoleUI.print_status_update(f"{name}: {count}", "white")
+            ConsoleUI.print_status_update(f"{name}: {count}", f"{Fore.WHITE}")
 

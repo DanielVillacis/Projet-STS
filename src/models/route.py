@@ -34,8 +34,8 @@ Cours: IFT630
 Version: 1.0
 """
 
-from models.intersection import Intersection
-from models.station import Station
+from src.models.intersection import Intersection
+from src.models.station import Station
 from src.models.origin import Origin
 
 # Route class representing a route in the system

@@ -31,8 +31,8 @@ Cours: IFT630
 Version: 1.0
 """
 
-from models.station import Station
-from models.stop import Stop
+from src.models.station import Station
+from src.models.stop import Stop
 from src.models.origin import Origin
 
 class Intersection(Origin):
