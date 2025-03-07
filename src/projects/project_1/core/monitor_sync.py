@@ -11,3 +11,5 @@ Utilise des moniteurs pour:
 - Coordonner les opérations entre composants
 - Surveiller l'état global du système
 """
+class MonitorSyncManager:
+    pass

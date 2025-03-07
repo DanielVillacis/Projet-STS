@@ -10,3 +10,6 @@ Utilise des barrières pour:
 - Coordonner les départs simultanés aux points de correspondance
 """
 
+class BarrierSyncManager:
+    pass
+

@@ -10,3 +10,5 @@ Utilise des RW Locks pour:
 - Garantir l'exclusivité des écritures
 - Optimiser l'accès concurrent aux données
 """
+class RWLockSyncManager:
+    pass

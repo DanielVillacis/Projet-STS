@@ -10,3 +10,5 @@ Utilise des Futures pour:
 - Obtenir les résultats de manière asynchrone
 - Combiner plusieurs calculs dépendants
 """
+class FutureSyncManager:
+    pass
