@@ -7,10 +7,13 @@ import random
 
 class MutexSyncManager:
     def __init__(self, seed=None, monitor=None, perf_monitor=None):
+        # variables de synchronisation
         self.mutex = threading.Lock()
         self.card_locks = {} # verrous pour les cartes
         self.card_balances = {} # soldes pour les cartes
         self.stop_locks = {} # verrous pour les arrêts de bus
+
+        # variables de configuration
         self.seed = seed
         self.monitor = monitor
         self.perf_monitor = perf_monitor
@@ -216,6 +219,7 @@ class MutexSyncManager:
             if self.perf_monitor:
                 self.perf_monitor.record_event('bus', boarded, wait_time, processing_time)
                 self.perf_monitor.record_event('stop', boarded, wait_time, processing_time) 
+                self.perf_monitor.record_event('mutex', boarded, wait_time, processing_time)
             
             return boarded 
         
