@@ -123,8 +123,9 @@ class ConditionSyncManager:
 
         # enregistrer les metriques de performance
         if self.perf_monitor:
-            self.perf_monitor.record_event('condition', success, wait_time, processing_time)
-        self.perf_monitor.record_event('passenger', success, wait_time, processing_time)
+            metadata = {"passenger_id" : passenger_id}
+            self.perf_monitor.record_event('condition', success, wait_time, processing_time, metadata=metadata)
+            self.perf_monitor.record_event('passenger', success, wait_time, processing_time)
 
         return bus_found if bus_found is not None else -1
 
@@ -136,6 +137,32 @@ class ConditionSyncManager:
         stop_id: Identifiant de l'arrêt 
         Returns: bool: True si la notification a réussi, False sinon
         """
+        start_time = time.time()
+
+        if stop_id not in self.stop_conditions:
+            if self.perf_monitor:
+                processing_time = time.time() - start_time
+                self.perf_monitor.record_event('condition', False, 0.0, processing_time)
+                self.perf_monitor.record_event('bus', False, 0.0, processing_time)
+            return False
+        
+        pre_lock_time = time.time()
+
+        with self.stop_conditions[stop_id]:
+            wait_time = time.time() - pre_lock_time
+
+            self.bus_at_stop[stop_id].add(bus_id)
+            self.stop_conditions[stop_id].notify_all()
+
+            processing_time = time.time() - start_time
+
+            if self.perf_monitor:
+                metadata = {"bus_id" : bus_id, "stop_id" : stop_id}
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('bus', True, wait_time, processing_time)
+                self.perf_monitor.record_event('stop', True, wait_time, processing_time)
+        
+            return True
 
     def notify_bus_departure(self, bus_id, stop_id) -> bool:
         """ 
@@ -144,6 +171,32 @@ class ConditionSyncManager:
         stop_id: Identifiant de l'arrêt 
         Returns: bool: True si la notification a réussi, False sinon 
         """
+        start_time = time.time()
+
+        if stop_id not in self.stop_conditions:
+            if self.perf_monitor:
+                processing_time = time.time() - start_time
+                self.perf_monitor.record_event('condition', False, 0.0, processing_time)
+                self.perf_monitor.record_event('bus', False, 0.0, processing_time)
+            return False
+        
+        pre_lock_time = time.time()
+
+        with self.stop_conditions[stop_id]:
+            wait_time = time.time() - pre_lock_time
+
+            self.bus_at_stop[stop_id].discard(bus_id)
+            self.stop_conditions[stop_id].notify_all()
+
+            processing_time = time.time() - pre_lock_time - wait_time
+
+            if self.perf_monitor:
+                metadata = {"bus_id" : bus_id, "stop_id" : stop_id}
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('bus', True, wait_time, processing_time)
+                self.perf_monitor.record_event('stop', True, wait_time, processing_time)
+        
+            return True
 
     def start_boarding(self, bus_id, stop_id) -> bool:
         """ 
@@ -152,6 +205,31 @@ class ConditionSyncManager:
         stop_id: Identifiant de l'arrêt 
         Returns: bool: True si l'opération a commencé avec succès, False sinon 
         """
+        start_time = time.time()
+
+        if bus_id not in self.bus_conditions:
+            return False
+
+        pre_lock_time = time.time()
+
+        with self.bus_conditions[bus_id]:
+            wait_time = time.time() - pre_lock_time
+
+            if self.boarding_complete[bus_id]:
+                return False
+
+            self.boarding_complete[bus_id] = False
+            self.bus_conditions[bus_id].notify_all()
+
+            processing_time = time.time() - pre_lock_time - wait_time
+
+            if self.perf_monitor:
+                metadata = {"bus_id" : bus_id, "stop_id" : stop_id}
+                self.perf_monitor.record_event('condition', True, 0.0, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('bus', True, 0.0, processing_time)
+        
+            return True
+        
 
     def complete_boarding(self, bus_id) -> bool:
         """ 
@@ -159,14 +237,81 @@ class ConditionSyncManager:
         Args: bus_id: Identifiant du bus 
         Returns: bool: True si la notification a réussi, False sinon 
         """
+        # Vérifier que le bus existe
+        if bus_id not in self.bus_conditions:
+            return False
+        
+        pre_lock_time = time.time()
+        
+        with self.bus_conditions[bus_id]:
+            wait_time = time.time() - pre_lock_time
+            
+            # Mettre à jour l'état d'embarquement
+            self.boarding_complete[bus_id] = True
+            
+            # Notifier tous les threads en attente (notamment le bus)
+            self.bus_conditions[bus_id].notify_all()
+            
+            processing_time = time.time() - pre_lock_time - wait_time
+            
+            # Enregistrer les métriques de performance
+            if self.perf_monitor:
+                metadata = {"bus_id": bus_id}
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('bus', True, wait_time, processing_time)
+            
+            return True
+
 
     def wait_for_boarding_completion(self, bus_id, timeout=10.0) -> bool:
         """ 
         Le bus attend que l'embarquement des passagers soit terminé. 
         Args: bus_id: Identifiant du bus 
-        timeout: Délai d'a:ente maximum en secondes 
+        timeout: Délai d'attente maximum en secondes 
         Returns: bool: True si l'embarquement est terminé, False si timeout 
         """
+        start_time = time.time()
+    
+        # Vérifier que le bus existe
+        if bus_id not in self.bus_conditions:
+            return False
+
+        pre_lock_time = time.time()
+    
+        with self.bus_conditions[bus_id]:
+            wait_time = time.time() - pre_lock_time
+            
+            # Calculer le temps restant pour le timeout
+            elapsed = time.time() - start_time
+            remaining_timeout = max(0, timeout - elapsed)
+            
+            # Attendre que l'embarquement soit marqué comme terminé ou que le timeout expire
+            while not self.boarding_complete[bus_id] and remaining_timeout > 0:
+                # Wait retourne False si le timeout expire, True si la condition est notifiée
+                wait_result = self.bus_conditions[bus_id].wait(remaining_timeout)
+                
+                # Recalculer le temps restant
+                elapsed = time.time() - start_time
+                remaining_timeout = max(0, timeout - elapsed)
+                
+                # Si le signal d'arrêt est activé ou si le timeout a expiré, sortir
+                if self.stop_signal or not wait_result:
+                    break
+            
+            # Déterminer si l'embarquement est terminé
+            is_complete = self.boarding_complete[bus_id]
+            
+            # Calculer les métriques de performance
+            processing_time = time.time() - pre_lock_time - wait_time
+            
+            # Enregistrer les métriques
+            if self.perf_monitor:
+                metadata = {"bus_id": bus_id}
+                self.perf_monitor.record_event('condition', is_complete, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('bus', is_complete, wait_time, processing_time)
+            
+            return is_complete
+
 
     def start_alighting(self, bus_id, stop_id) -> bool:
         """ 
@@ -175,6 +320,36 @@ class ConditionSyncManager:
         stop_id: Identifiant de l'arrêt 
         Returns: bool: True si l'opération a commencé avec succès, False sinon 
         """
+        # Vérifier que le bus existe
+        if bus_id not in self.bus_conditions:
+            return False
+
+        pre_lock_time = time.time()
+
+        with self.bus_conditions[bus_id]:
+            wait_time = time.time() - pre_lock_time
+
+            # Si le débarquement est déjà en cours, ne pas le redémarrer
+            if not self.alighting_complete[bus_id]:
+                return False
+
+            # Marquer le débarquement comme en cours (non terminé)
+            self.alighting_complete[bus_id] = False
+            
+            # Notifier tous les threads en attente (les passagers)
+            self.bus_conditions[bus_id].notify_all()
+
+            processing_time = time.time() - pre_lock_time - wait_time
+
+            if self.perf_monitor:
+                metadata = {"bus_id": bus_id, "stop_id": stop_id}
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('bus', True, wait_time, processing_time)
+                
+            print(f"Débarquement commencé pour le bus {bus_id} à l'arrêt {stop_id}")
+        
+            return True
+
 
     def complete_alighting(self, bus_id) -> bool:
         """ 
@@ -182,6 +357,32 @@ class ConditionSyncManager:
         Args: bus_id: Identifiant du bus 
         Returns: bool: True si la notification a réussi, False sinon 
         """
+        # Vérifier que le bus existe
+        if bus_id not in self.bus_conditions:
+            return False
+        
+        pre_lock_time = time.time()
+        
+        with self.bus_conditions[bus_id]:
+            wait_time = time.time() - pre_lock_time
+            
+            # Mettre à jour l'état de débarquement
+            self.alighting_complete[bus_id] = True
+            
+            # Notifier tous les threads en attente (notamment le bus)
+            self.bus_conditions[bus_id].notify_all()
+            
+            processing_time = time.time() - pre_lock_time - wait_time
+            
+            # Enregistrer les métriques de performance
+            if self.perf_monitor:
+                metadata = {"bus_id": bus_id}
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('bus', True, wait_time, processing_time)
+            
+            print(f"Débarquement terminé pour le bus {bus_id}")
+            
+            return True
 
     def wait_for_alighting_completion(self, bus_id, timeout=10.0) -> bool:
         """ 
@@ -190,6 +391,50 @@ class ConditionSyncManager:
         timeout: Délai d'attente maximum en secondes 
         Returns: bool: True si le débarquement est terminé, False si timeout 
         """
+        start_time = time.time()
+    
+        # Vérifier que le bus existe
+        if bus_id not in self.bus_conditions:
+            return False
+        
+        pre_lock_time = time.time()
+        
+        with self.bus_conditions[bus_id]:
+            wait_time = time.time() - pre_lock_time
+            
+            # Calculer le temps restant pour le timeout
+            elapsed = time.time() - start_time
+            remaining_timeout = max(0, timeout - elapsed)
+            
+            # Attendre que le débarquement soit marqué comme terminé ou que le timeout expire
+            while not self.alighting_complete[bus_id] and remaining_timeout > 0:
+                # Wait retourne False si le timeout expire, True si la condition est notifiée
+                wait_result = self.bus_conditions[bus_id].wait(remaining_timeout)
+                
+                # Recalculer le temps restant
+                elapsed = time.time() - start_time
+                remaining_timeout = max(0, timeout - elapsed)
+                
+                # Si le signal d'arrêt est activé ou si le timeout a expiré, sortir
+                if self.stop_signal or not wait_result:
+                    break
+            
+            # Déterminer si le débarquement est terminé
+            is_complete = self.alighting_complete[bus_id]
+            
+            # Calculer les métriques de performance
+            processing_time = time.time() - pre_lock_time - wait_time
+            
+            # Enregistrer les métriques
+            if self.perf_monitor:
+                metadata = {"bus_id": bus_id}
+                self.perf_monitor.record_event('condition', is_complete, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('bus', is_complete, wait_time, processing_time)
+            
+            print(f"Bus {bus_id}: {'Débarquement terminé' if is_complete else 'Timeout de débarquement'}")
+            
+            return is_complete
+
 
     def start_transfer(self, passenger_id, from_bus_id, to_bus_id) -> bool:
         """ 
@@ -199,6 +444,38 @@ class ConditionSyncManager:
         to_bus_id: Bus d'arrivée 
         Returns: bool: True si le transfert a commencé avec succès, False sinon 
         """
+        # Vérifier que les bus existent
+        if from_bus_id not in self.bus_conditions or to_bus_id not in self.bus_conditions:
+            return False
+        
+        pre_lock_time = time.time()
+        
+        with self.transfer_condition:
+            wait_time = time.time() - pre_lock_time
+            
+            # Vérifier si un transfert est déjà en cours pour ce passager
+            if passenger_id in self.transfers_in_progress:
+                return False
+            
+            # Ajouter le transfert en cours
+            self.transfers_in_progress[passenger_id] = (from_bus_id, to_bus_id)
+            
+            # Notifier tous les threads en attente (les bus)
+            self.transfer_condition.notify_all()
+            
+            processing_time = time.time() - pre_lock_time - wait_time
+            
+            # Enregistrer les métriques de performance
+            if self.perf_monitor:
+                metadata = {"passenger_id": passenger_id, "from_bus_id": from_bus_id, "to_bus_id": to_bus_id}
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('passenger', True, wait_time, processing_time)
+            
+            print(f"Transfert commencé pour le passager {passenger_id} de {from_bus_id} à {to_bus_id}")
+        
+            return True
+        
+
 
     def complete_transfer(self, passenger_id, from_bus_id, to_bus_id) -> bool:
         """ 
@@ -208,6 +485,42 @@ class ConditionSyncManager:
         to_bus_id: Bus d'arrivée 
         Returns: bool: True si le transfert a été terminé avec succès, False sinon 
         """
+        # Vérifier que les bus existent
+        if from_bus_id not in self.bus_conditions or to_bus_id not in self.bus_conditions:
+            return False
+        
+        pre_lock_time = time.time()
+        
+        with self.transfer_condition:
+            wait_time = time.time() - pre_lock_time
+            
+            # Vérifier si le transfert est en cours pour ce passager
+            if passenger_id not in self.transfers_in_progress:
+                return False
+            
+            # Vérifier que le transfert est correct
+            if self.transfers_in_progress[passenger_id] != (from_bus_id, to_bus_id):
+                return False
+            
+            # Supprimer le transfert en cours
+            del self.transfers_in_progress[passenger_id]
+            
+            # Notifier tous les threads en attente (les bus)
+            self.transfer_condition.notify_all()
+            
+            processing_time = time.time() - pre_lock_time - wait_time
+            
+            # Enregistrer les métriques de performance
+            if self.perf_monitor:
+                metadata = {"passenger_id": passenger_id, "from_bus_id": from_bus_id, "to_bus_id": to_bus_id}
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('passenger', True, wait_time, processing_time)
+            
+            print(f"Transfert terminé pour le passager {passenger_id} de {from_bus_id} à {to_bus_id}")
+        
+            return True
+
+
 
     def wait_for_transfer_completion(self, bus_id, timeout=15.0) -> bool:
         """ 
@@ -215,12 +528,70 @@ class ConditionSyncManager:
         Args: bus_id: Identifiant du bus 
         timeout: Délai d'attente maximum en secondes 
         Returns: bool: True si tous les transferts sont terminés, False si timeout """
+        start_time = time.time()
+    
+        # Vérifier que le bus existe
+        if bus_id not in self.bus_conditions:
+            if self.perf_monitor:
+                processing_time = time.time() - start_time
+                self.perf_monitor.record_event('condition', False, 0.0, processing_time)
+                self.perf_monitor.record_event('bus', False, 0.0, processing_time)
+            return False
+            
+        pre_lock_time = time.time()
+        
+        with self.transfer_condition:
+            wait_time = time.time() - pre_lock_time
+            
+            # Calculer le délai restant
+            elapsed = time.time() - start_time
+            remaining_timeout = max(0, timeout - elapsed)
+            
+            # Fonction pour vérifier si des transferts concernent ce bus
+            def has_pending_transfers():
+                for passenger_id, (from_bus, to_bus) in self.transfers_in_progress.items():
+                    if from_bus == bus_id or to_bus == bus_id:
+                        return True
+                return False
+            
+            # Attendre tant qu'il y a des transferts en cours pour ce bus
+            while has_pending_transfers() and remaining_timeout > 0:
+                # Attendre avec le timeout restant
+                wait_result = self.transfer_condition.wait(remaining_timeout)
+                
+                # Recalculer le temps restant
+                elapsed = time.time() - start_time
+                remaining_timeout = max(0, timeout - elapsed)
+                
+                # Si le signal d'arrêt est activé, sortir
+                if self.stop_signal or not wait_result:
+                    break
+            
+            # Vérifier si tous les transferts sont terminés
+            transfers_completed = not has_pending_transfers()
+            
+            # Calculer les métriques de performance
+            processing_time = time.time() - pre_lock_time - wait_time
+            
+            # Enregistrer les métriques
+            if self.perf_monitor:
+                metadata = {"bus_id": bus_id}
+                self.perf_monitor.record_event('condition', transfers_completed, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('bus', transfers_completed, wait_time, processing_time)
+            
+            print(f"Bus {bus_id}: {'Tous les transferts sont terminés' if transfers_completed else 'Timeout sur attente des transferts'}")
+            
+            return transfers_completed
+            
+
+        
 
     def run_scenarios(self, duration):
         """ 
         Exécute les scénarios de test. 
         Args: duration: Durée d'exécution des scénarios en secondes 
         """
+        
 
     def cleanup(self):
         """ 
