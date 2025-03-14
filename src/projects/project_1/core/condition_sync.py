@@ -13,6 +13,7 @@ Utilise des variables de condition pour:
 """
 import threading
 import time
+import random
 
 class ConditionSyncManager:
     def __init__(self, seed=None, monitor=None, perf_monitor=None):
@@ -123,8 +124,7 @@ class ConditionSyncManager:
 
         # enregistrer les metriques de performance
         if self.perf_monitor:
-            metadata = {"passenger_id" : passenger_id}
-            self.perf_monitor.record_event('condition', success, wait_time, processing_time, metadata=metadata)
+            self.perf_monitor.record_event('condition', success, wait_time, processing_time)
             self.perf_monitor.record_event('passenger', success, wait_time, processing_time)
 
         return bus_found if bus_found is not None else -1
@@ -157,8 +157,7 @@ class ConditionSyncManager:
             processing_time = time.time() - start_time
 
             if self.perf_monitor:
-                metadata = {"bus_id" : bus_id, "stop_id" : stop_id}
-                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time)
                 self.perf_monitor.record_event('bus', True, wait_time, processing_time)
                 self.perf_monitor.record_event('stop', True, wait_time, processing_time)
         
@@ -191,8 +190,7 @@ class ConditionSyncManager:
             processing_time = time.time() - pre_lock_time - wait_time
 
             if self.perf_monitor:
-                metadata = {"bus_id" : bus_id, "stop_id" : stop_id}
-                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time)
                 self.perf_monitor.record_event('bus', True, wait_time, processing_time)
                 self.perf_monitor.record_event('stop', True, wait_time, processing_time)
         
@@ -224,8 +222,7 @@ class ConditionSyncManager:
             processing_time = time.time() - pre_lock_time - wait_time
 
             if self.perf_monitor:
-                metadata = {"bus_id" : bus_id, "stop_id" : stop_id}
-                self.perf_monitor.record_event('condition', True, 0.0, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', True, 0.0, processing_time)
                 self.perf_monitor.record_event('bus', True, 0.0, processing_time)
         
             return True
@@ -256,8 +253,7 @@ class ConditionSyncManager:
             
             # Enregistrer les métriques de performance
             if self.perf_monitor:
-                metadata = {"bus_id": bus_id}
-                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time)
                 self.perf_monitor.record_event('bus', True, wait_time, processing_time)
             
             return True
@@ -306,8 +302,7 @@ class ConditionSyncManager:
             
             # Enregistrer les métriques
             if self.perf_monitor:
-                metadata = {"bus_id": bus_id}
-                self.perf_monitor.record_event('condition', is_complete, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', is_complete, wait_time, processing_time)
                 self.perf_monitor.record_event('bus', is_complete, wait_time, processing_time)
             
             return is_complete
@@ -342,8 +337,7 @@ class ConditionSyncManager:
             processing_time = time.time() - pre_lock_time - wait_time
 
             if self.perf_monitor:
-                metadata = {"bus_id": bus_id, "stop_id": stop_id}
-                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time)
                 self.perf_monitor.record_event('bus', True, wait_time, processing_time)
                 
             print(f"Débarquement commencé pour le bus {bus_id} à l'arrêt {stop_id}")
@@ -376,8 +370,7 @@ class ConditionSyncManager:
             
             # Enregistrer les métriques de performance
             if self.perf_monitor:
-                metadata = {"bus_id": bus_id}
-                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time)
                 self.perf_monitor.record_event('bus', True, wait_time, processing_time)
             
             print(f"Débarquement terminé pour le bus {bus_id}")
@@ -427,8 +420,7 @@ class ConditionSyncManager:
             
             # Enregistrer les métriques
             if self.perf_monitor:
-                metadata = {"bus_id": bus_id}
-                self.perf_monitor.record_event('condition', is_complete, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', is_complete, wait_time, processing_time)
                 self.perf_monitor.record_event('bus', is_complete, wait_time, processing_time)
             
             print(f"Bus {bus_id}: {'Débarquement terminé' if is_complete else 'Timeout de débarquement'}")
@@ -467,8 +459,7 @@ class ConditionSyncManager:
             
             # Enregistrer les métriques de performance
             if self.perf_monitor:
-                metadata = {"passenger_id": passenger_id, "from_bus_id": from_bus_id, "to_bus_id": to_bus_id}
-                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time)
                 self.perf_monitor.record_event('passenger', True, wait_time, processing_time)
             
             print(f"Transfert commencé pour le passager {passenger_id} de {from_bus_id} à {to_bus_id}")
@@ -512,8 +503,7 @@ class ConditionSyncManager:
             
             # Enregistrer les métriques de performance
             if self.perf_monitor:
-                metadata = {"passenger_id": passenger_id, "from_bus_id": from_bus_id, "to_bus_id": to_bus_id}
-                self.perf_monitor.record_event('condition', True, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', True, wait_time, processing_time)
                 self.perf_monitor.record_event('passenger', True, wait_time, processing_time)
             
             print(f"Transfert terminé pour le passager {passenger_id} de {from_bus_id} à {to_bus_id}")
@@ -575,8 +565,7 @@ class ConditionSyncManager:
             
             # Enregistrer les métriques
             if self.perf_monitor:
-                metadata = {"bus_id": bus_id}
-                self.perf_monitor.record_event('condition', transfers_completed, wait_time, processing_time, metadata=metadata)
+                self.perf_monitor.record_event('condition', transfers_completed, wait_time, processing_time)
                 self.perf_monitor.record_event('bus', transfers_completed, wait_time, processing_time)
             
             print(f"Bus {bus_id}: {'Tous les transferts sont terminés' if transfers_completed else 'Timeout sur attente des transferts'}")
@@ -584,17 +573,174 @@ class ConditionSyncManager:
             return transfers_completed
             
 
-        
-
     def run_scenarios(self, duration):
         """ 
         Exécute les scénarios de test. 
         Args: duration: Durée d'exécution des scénarios en secondes 
         """
+        # Réinitialiser le signal d'arrêt
+        self.stop_signal = False
+        self.threads = []
+        
+        # Récupérer les IDs des bus et des arrêts
+        if self.seed:
+            bus_ids = list(self.seed.buses.keys())
+            stop_ids = list(self.seed.stops.keys())
+        else:
+            # Pour les tests sans seed
+            bus_ids = [f"B{i}" for i in range(5)]
+            stop_ids = [f"S{i}" for i in range(10)]
+        
+        # Scénario 1: Arrivées et départs de bus
+        def bus_movement_scenario():
+            print("Démarrage du scénario de mouvement des bus")
+            while not self.stop_signal:
+                for bus_id in bus_ids:
+                    # Choisir un arrêt aléatoire
+                    stop_id = random.choice(stop_ids)
+                    
+                    # Notifier l'arrivée du bus à l'arrêt
+                    if self.notify_bus_arrival(bus_id, stop_id):
+                        print(f"Bus {bus_id} arrivé à l'arrêt {stop_id}")
+                        
+                        # Simuler un temps d'attente à l'arrêt
+                        time.sleep(random.uniform(0.5, 1.5))
+                        
+                        # Notifier le départ du bus
+                        if self.notify_bus_departure(bus_id, stop_id):
+                            print(f"Bus {bus_id} parti de l'arrêt {stop_id}")
+                    
+                    # Pause entre les déplacements
+                    time.sleep(random.uniform(0.2, 0.8))
+                    
+                    if self.stop_signal:
+                        break
+        
+        # Scénario 2: Embarquement et débarquement
+        def boarding_alighting_scenario():
+            print("Démarrage du scénario d'embarquement/débarquement")
+            passenger_counter = 0
+            
+            while not self.stop_signal:
+                # Créer un ID de passager unique
+                passenger_id = f"P{passenger_counter}"
+                passenger_counter += 1
+                
+                # Choisir un arrêt aléatoire
+                stop_id = random.choice(stop_ids)
+                
+                # Attendre qu'un bus arrive à cet arrêt
+                bus_id = self.wait_for_bus(passenger_id, stop_id, timeout=5.0)
+                
+                if bus_id != -1:
+                    print(f"Passager {passenger_id} a trouvé le bus {bus_id} à l'arrêt {stop_id}")
+                    
+                    # Commencer l'embarquement
+                    if self.start_boarding(bus_id, stop_id):
+                        print(f"Embarquement commencé dans le bus {bus_id}")
+                        time.sleep(random.uniform(0.2, 0.5))  # Simuler le temps d'embarquement
+                        
+                        # Terminer l'embarquement
+                        self.complete_boarding(bus_id)
+                        
+                        # Attendre un peu
+                        time.sleep(random.uniform(1.0, 2.0))
+                        
+                        # Débarquement au prochain arrêt
+                        next_stop = random.choice([s for s in stop_ids if s != stop_id])
+                        if self.notify_bus_arrival(bus_id, next_stop):
+                            if self.start_alighting(bus_id, next_stop):
+                                time.sleep(random.uniform(0.2, 0.5))  # Temps de débarquement
+                                self.complete_alighting(bus_id)
+                
+                # Pause entre les passagers
+                time.sleep(random.uniform(0.1, 0.3))
+                
+                if self.stop_signal:
+                    break
+        
+        # Scénario 3: Transferts entre bus
+        def transfer_scenario():
+            print("Démarrage du scénario de transfert")
+            passenger_counter = 100  # Pour avoir des IDs distincts
+            
+            while not self.stop_signal:
+                # Créer un ID de passager unique
+                passenger_id = f"P{passenger_counter}"
+                passenger_counter += 1
+                
+                if len(bus_ids) >= 2:
+                    # Sélectionner deux bus différents
+                    from_bus, to_bus = random.sample(bus_ids, 2)
+                    
+                    # Commencer un transfert
+                    if self.start_transfer(passenger_id, from_bus, to_bus):
+                        print(f"Transfert commencé pour {passenger_id} de {from_bus} à {to_bus}")
+                        
+                        # Simuler le temps de transfert
+                        time.sleep(random.uniform(0.5, 1.5))
+                        
+                        # Compléter le transfert
+                        self.complete_transfer(passenger_id, from_bus, to_bus)
+                        
+                        # Le bus attend que tous les transferts soient terminés
+                        self.wait_for_transfer_completion(from_bus, timeout=3.0)
+                
+                # Pause entre les transferts
+                time.sleep(random.uniform(0.3, 0.7))
+                
+                if self.stop_signal:
+                    break
+        
+        # Création des threads pour les scénarios
+        t1 = threading.Thread(target=bus_movement_scenario, name="BusMovement")
+        t2 = threading.Thread(target=boarding_alighting_scenario, name="BoardingAlighting")
+        t3 = threading.Thread(target=transfer_scenario, name="Transfer")
+        
+        self.threads = [t1, t2, t3]
+        
+        # Démarrage des threads
+        for thread in self.threads:
+            thread.start()
+            print(f"Thread {thread.name} démarré")
+        
+        # Attente pendant la durée spécifiée
+        print(f"Exécution des scénarios pendant {duration} secondes...")
+        time.sleep(duration)
+        
+        # Arrêt des threads
+        self.stop_signal = True
+        print("Signal d'arrêt envoyé aux threads")
+        
+        # Attente de la fin des threads
+        for thread in self.threads:
+            thread.join(timeout=2.0)  # Timeout de 2 secondes pour éviter les blocages
+            print(f"Thread {thread.name} terminé")
+        
+        print("Tous les scénarios sont terminés")
+
+
         
 
     def cleanup(self):
         """ 
         Nettoie les ressources utilisées par le gestionnaire de synchronisation. 
         """
+         # vider les Variables de condition
+        self.stop_conditions = {}
+        self.bus_conditions = {}
+        self.transfer_condition = None 
+        # vider États partagés à protéger
+        self.bus_at_stop = {} # Stocke les bus présents à chaque arrêt
+        self.boarding_complete = {} # État d'embarquement pour chaque bus
+        self.alighting_complete = {} # État de débarquement 
+        self.transfers_in_progress = {} # Transferts en cours
+        for thread in self.threads:
+            thread.join(timeout=2.0)
+        self.threads = []
+        self.stop_signal = False
+        print("Nettoyage terminé")
+        
+        
+
 
